@@ -1,12 +1,13 @@
 data = "";
 totalQuantity = [];
 totalPrice = [];
-
+let products = [];
+let yes = true;
 
 
 //recuperation donnee produit
 
-//let local = JSON.parse(localStorage.getItem("basket"));
+let local = JSON.parse(localStorage.getItem("basket"));
 
 
 //recuperation fetch pour le prix 
@@ -20,26 +21,13 @@ const getProduct = () => {
             priceId[data[i]._id] = data[i].price 
         }
 
-
-
-const localProducts = () => {
-    let local = JSON.parse(localStorage.getItem("basket"));
-    if(local != null) {
-        for (let i = 0; i < local.length; i++) {
-            console.log(local[i]);
-    }
- }
-}
-
 // push dans le panier 
 
 const pushProduct = () => {
-    let local = JSON.parse(localStorage.getItem("basket"));
     let cartSection = document.querySelector("#cart__items");
-    if(local != null) {
-        for (let i = 0; i < local.length; i++) {
+    if(local != null) 
+    {for (let i = 0; i < local.length; i++) {
             const productPrice = priceId[local[i].id];
-
             cartSection.innerHTML += 
             `<article class="cart__item" data-id="${local[i].id}" data-color="${local[i].couleur}">
             <div class="cart__item__img">
@@ -63,13 +51,27 @@ const pushProduct = () => {
             </div>
           </article>`
 
+          let quantityNumber = local[i].quantite;
+          let priceNumber = parseInt (productPrice * local[i].quantite);
 
+          totalQuantity.push(quantityNumber);
+          totalPrice.push(priceNumber);
+
+modifyQuantity();
+deleteItem();
+sommes();
+}
+};
+}
+pushProduct();
+});
+};
+getProduct();
 
 
 // modification de la quantite 
 
-const modifyQuantity = () => {
-    let local = JSON.parse(localStorage.getItem("basket"));
+const modifyQuantity = async () => {
     let itemQuantity = document.querySelectorAll(".itemQuantity");
     for (let i = 0; i < itemQuantity.length; i++) {
         const element = itemQuantity[i];
@@ -90,11 +92,9 @@ const modifyQuantity = () => {
 
     }
 }
-modifyQuantity();
 
 //suppression d un produit 
-const deleteItem = () => {
-    let local = JSON.parse(localStorage.getItem("basket"));
+const deleteItem = async () => {
     let deleteItem = document.querySelectorAll(".deleteItem");
     for (let i = 0; i < deleteItem.length; i++) {
             deleteItem[i].addEventListener('click',(e) => {
@@ -112,20 +112,9 @@ const deleteItem = () => {
             });
         };
 }
-deleteItem();
-}
-    };
 
 // totaux 
-const sommes = () => {
-    //let local = JSON.parse(localStorage.getItem("basket"));
-    let somme = localProducts();
-    console.log(somme);
-    let quantityNumber = somme[i].quantite;
-    let priceNumber = parseInt (productPrice * local[i].quantite);
-
-    totalQuantity.push(quantityNumber);
-    totalPrice.push(priceNumber);
+const sommes = async () => {
     let sommeQuantity = totalQuantity.reduce(
         (accumulateur, valeurCourante) => accumulateur + valeurCourante
         , 0);
@@ -137,20 +126,6 @@ const sommes = () => {
     document.getElementById("totalPrice").innerHTML += `${sommePrice}`;
 
 }
-sommes ();
-
-
-
-}
-pushProduct();
-
-});
-};
-getProduct();
-
-
-
-
 
 //FORMULAIRE 
 
@@ -268,6 +243,23 @@ cityForm();
 
 //ENVOI AU LOCAL STORAGE 
 
+//verifier que le panier n'est pas vide 
+console.log(local.length);
+
+const isItEmpty = () => {
+    for (let i = 0; i < local.length; i++) 
+    if(local.length >= 1) {
+            console.log("panier rempli");
+            products.push(local[i].id);
+            console.log(products);
+            yes = true;
+            
+} if (local.length < 1) { 
+    alert("Panier vide")
+    yes = false;
+} 
+}
+
 //initialisation du tableau contact
 
 initContact = () => {
@@ -286,30 +278,37 @@ const btnSubmit = document.querySelector(".cart__order__form__submit");
 btnSubmit.addEventListener("click", (e) => {
     e.preventDefault();
     initContact();
-    let contact = {
-        firstName: prenom.value,
-        lastName: nom.value,
-        address: adresse.value, 
-        city: ville.value, 
-        email: email.value,
-    };
-    let products = [];
-    saveContact(contact, products);
-    sendToServer(contact, products);
+    isItEmpty();
+    if (yes === true) {
+        let contact = {
+            firstName: prenom.value,
+            lastName: nom.value,
+            address: adresse.value, 
+            city: ville.value, 
+            email: email.value,
+        };
+        products;
+        saveContact(contact);
+        sendToServer(contact, products);
+       
+    }
+
+
 });
 
 
 // sauvegarde des données du formulaire
 
-    const saveContact = (contact, products) => {
+    const saveContact = (contact) => {
         let isValid = true;
-        if (prenomValue && nomValue && emailValue ) {
+        //console.log(local);
+        if (prenomValue && nomValue && emailValue) {
             console.log("that's good");
             isValid = true;       
             let localFormulaire = JSON.parse(localStorage.getItem("contact"));
             console.log(localFormulaire);
         } else {
-            console.error("Veuillez remplir le formulaire");
+            alert("Veuillez remplir le formulaire")
         }
         localStorage.setItem("contact", JSON.stringify(contact));
     }
@@ -317,6 +316,7 @@ btnSubmit.addEventListener("click", (e) => {
 
 
 // ENVOI AU SERVEUR
+
     const sendToServer = (contact, products) => {
       fetch("http://localhost:3000/api/products/order", {
       method: "POST",
@@ -331,9 +331,16 @@ btnSubmit.addEventListener("click", (e) => {
         console.log(orderId);
 
         if (orderId != null) {
-            //setItem sur le panier et je le vide 
+            const emptyBasket = () => {
+                local = null;
+                contact = null
+                //console.log(products);
+            }
+            //emptyBasket();
+            localStorage.setItem("contact", JSON.stringify(contact));
+            localStorage.setItem ("basket", JSON.stringify(local));
             console.log("confirmation en cours");
-            location.href = "confirmation.html?id=" + `${orderId}`;
+            //location.href = "confirmation.html?id=" + `${orderId}`;
         }
       });
 
